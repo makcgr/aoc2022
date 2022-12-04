@@ -22,35 +22,24 @@ def getShape(input):
     match input:
         case "A":
             return Shape.ROCK
-        case "X":
-            return Shape.ROCK
         case "B":
             return Shape.PAPER
-        case "Y":
-            return Shape.PAPER
         case "C":
-            return Shape.SCISSORS
-        case "Z":
             return Shape.SCISSORS
         case _:
             return None
 
-def round(me, opp):
-    if me == opp:
-        return Outcome.Draw
-    if me == Shape.PAPER and opp == Shape.ROCK:        
-        return Outcome.Victory
-    if me == Shape.PAPER and opp == Shape.SCISSORS:        
-        return Outcome.Defeat
-    if me == Shape.ROCK and opp == Shape.PAPER:        
-        return Outcome.Defeat
-    if me == Shape.ROCK and opp == Shape.SCISSORS:        
-        return Outcome.Victory
-    if me == Shape.SCISSORS and opp == Shape.ROCK:        
-        return Outcome.Defeat
-    if me == Shape.SCISSORS and opp == Shape.PAPER:        
-        return Outcome.Victory
-    return None
+
+def getNeededOutcome(input):
+    match input:
+        case "X":
+            return Outcome.Defeat
+        case "Y":
+            return Outcome.Draw
+        case "Z":
+            return Outcome.Victory
+        case _:
+            return None
 
 
 def getOutcomePoints(outcome):
@@ -69,18 +58,46 @@ def getShapePoints(shape):
         case _: return 
 
 
+def getMyShape(opponentShape, neededOutcome):
+    if neededOutcome == Outcome.Draw:
+            return opponentShape
+    match opponentShape:
+        case Shape.ROCK: 
+            if neededOutcome == Outcome.Defeat:
+                return Shape.SCISSORS
+            if neededOutcome == Outcome.Victory:
+                return Shape.PAPER
+            
+        case Shape.PAPER: 
+            if neededOutcome == Outcome.Defeat:
+                return Shape.ROCK
+            if neededOutcome == Outcome.Victory:
+                return Shape.SCISSORS
+            
+        case Shape.SCISSORS: 
+            if neededOutcome == Outcome.Defeat:
+                return Shape.PAPER
+            if neededOutcome == Outcome.Victory:
+                return Shape.ROCK
+            
+        case _: return 
+
+
+
 try:
     response = requests.get(url, cookies={'session': SESSIONID}, headers={'User-Agent': USER_AGENT})
 
     myScore = 0
     for line in response.text.splitlines():
-        opp, me = [ getShape(s) for s in line.split() ]
+        opp, me = line.split()
+        opponentShape = getShape(opp)
+        neededOutcome = getNeededOutcome(me)
+        myShape = getMyShape(opponentShape, neededOutcome)
         
-        outcome = round(me, opp)
-        points = getOutcomePoints(outcome) + getShapePoints(me)
+        points = getOutcomePoints(neededOutcome) + getShapePoints(myShape)
         myScore += points
-        print(f'Opponent: {opp} Me: {me} Result: {outcome} Points: {points}')
-        
+        print(f'Opponent: {opp} Me: {me} Result: {neededOutcome} Points: {points}')
+
     print(f'My score is: {myScore}')
 except:
     print("error")
