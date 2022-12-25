@@ -16,6 +16,7 @@ class LineMeaning(Enum):
 
 class Node(object):
     def __init__(self, name):
+        self.type = LineMeaning.NONE
         self.name = name
         self.size = 0
         self.parent = None
@@ -35,36 +36,45 @@ class Node(object):
             cur = cur.parent
             cur.size += int(size)
 
-
     def printChildrenRecursive(self):
         cur = self
         print (f'{self.name} {self.size}')
         for node in self.children:
             node.printChildrenRecursive()
 
-
-    def findNodesLessThan(root, value):
+    def findNodesAtMost(root, atMostValue):
         nodes = list()
-        Node.findNodesRecursive(root, nodes, value)
+
+        Node.findNodesRecursive(root, nodes, lambda node: node.size <= atMostValue)
         return nodes
 
-
-    def findNodesRecursive(node, list, atMost):
-        if node.size <= atMost:
+    def findNodesRecursive(node, list, nodeFitsFunc):
+        if nodeFitsFunc(node):
             list.append(node)
         for child in node.children:
-            Node.findNodesRecursive(child, list, atMost)
+            Node.findNodesRecursive(child, list, nodeFitsFunc)
         return list
 
+    def findSmallestFittingDirectoryAsync(node, neededSpace, smallestSoFar):        
+        if node.size >= neededSpace and node.size < smallestSoFar:
+            print(f'Smallest so far: {smallestSoFar} and directory {node.name} is smaller: {node.size}')
+            smallestSoFar = node.size
+        
+        for child in node.children:
+            smallestSoFar = Node.findSmallestFittingDirectoryAsync(child, neededSpace, smallestSoFar)
+        return smallestSoFar
 
 def createSet(startId, finishId):
     return set(range(int(startId), int(finishId)+1))
+
 
 try:
     response = requests.get(url, cookies={'session': SESSIONID}, headers={'User-Agent': USER_AGENT})
 
     count = 0
     
+    smallestDirToDeleteSize = 0
+
     cur = None
     root = None
     for line in response.text.splitlines():
@@ -122,11 +132,21 @@ try:
         root.printChildrenRecursive()
         atMost = 100000
         #sum = Node.findSumRecursive(root, 0, atMost)
-        nodes = Node.findNodesLessThan(root, atMost)
+        nodes = Node.findNodesAtMost(root, atMost)        
         sum = 0
         for node in nodes:
             sum += node.size
-        print(sum)
+        print(f'Sum of directories: {sum}')
+
+        SPACE_TOTAL = 70000000
+        unusedSpace = SPACE_TOTAL - root.size
+        neededSpace = 30000000 - unusedSpace
+        if (neededSpace > 0):
+            print(f'Space needed: {neededSpace}')
+            smallestDirToDeleteSize = Node.findSmallestFittingDirectoryAsync(root, neededSpace, SPACE_TOTAL)
+            print(f'Smallest dir size to delete and free space: {smallestDirToDeleteSize }')
+        else:
+            print("There is enough space to install the update")
 
 except:
     print("error")
